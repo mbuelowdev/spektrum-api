@@ -1,9 +1,9 @@
 {
-  "version": "1.0.12",
+  "version": "1.0.0",
   "name": "mbuelow.dev/spektrum-api",
   "tag": "latest",
   "url": "https://api.spektrum.mbuelow.dev",
-  "informDiscord": false,
+  "informDiscord": true,
   "_documentation1": "The arguments are being passed to docker run. They can be empty.",
   "_documentation2": "You can mount custom stuff via the path /deployments/mbuelow_dev_spektrum_api/.",
   "_documentation3": "0.0.0.0 exposes the service publicly and 172.17.0.1 internally",
@@ -11,14 +11,14 @@
     {
         "name": "mbuelow.dev/spektrum-api",
         "tag": "latest",
-        "argPorts": "-p 172.17.0.1:16004:80",
+        "argPorts": "-p 172.17.0.1:16009:80",
         "argVolumes": "",
         "argExtra": ""
     },
     {
         "name": "postgres",
         "tag": "17.6",
-        "argPorts": "-p 172.17.0.1:16005:5432",
+        "argPorts": "-p 172.17.0.1:16010:5432",
         "argVolumes": "-v /deployments/mbuelow_dev_spektrum_api/init.sql:/docker-entrypoint-initdb.d/init.sql -v spektrum_api_postgres_data:/var/lib/postgresql",
         "argExtra": "-e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=spektrum"
     }
