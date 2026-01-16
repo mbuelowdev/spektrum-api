@@ -1,0 +1,12 @@
+services:
+    spektrum:
+        container_name: webserver
+        build:
+            dockerfile: Dockerfile
+        env_file: ".env.local"
+        volumes:
+            - ./:/var/www/spektrum
+        ports:
+            - "80:80"
+        expose:
+            - "80"
