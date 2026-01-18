@@ -8,5 +8,7 @@ final class PlayerUpdateDto
     public function __construct(
         #[Assert\NotBlank]
         public string $action,
+        #[Assert\NotBlank]
+        public string $value,
     ) {}
 }

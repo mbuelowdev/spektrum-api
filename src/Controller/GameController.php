@@ -23,6 +23,7 @@ final class GameController extends AbstractController
 
     #[Route('/game/{gameId}/update', name: 'app_game_update', methods: ['POST'])]
     public function app_game_update(
+        int $gameId,
         #[MapRequestPayload] PlayerUpdateDto $dto,
         HubInterface $hub
     ): JsonResponse {
@@ -31,8 +32,11 @@ final class GameController extends AbstractController
 
         // Inform subscribers about changes
         $update = new Update(
-            'game-' . $dto->action,
-            json_encode(['action' => $dto->action])
+            'game-' . $gameId,
+            json_encode([
+                'action' => $dto->action,
+                'value' => $dto->value,
+            ]),
         );
         $hub->publish($update);
 
