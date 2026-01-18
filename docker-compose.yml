@@ -1,6 +1,6 @@
 services:
     spektrum:
-        container_name: webserver
+        container_name: spektrum-webserver
         build:
             dockerfile: Dockerfile
         env_file: ".env.local"
@@ -10,3 +10,22 @@ services:
             - "80:80"
         expose:
             - "80"
+
+###> symfony/mercure-bundle ###
+    mercure:
+        image: dunglas/mercure
+        restart: unless-stopped
+        container_name: spektrum-mercure
+        ports:
+            - "3000:80"
+        environment:
+          # Uncomment the following line to disable HTTPS,
+          SERVER_NAME: ':80'
+          MERCURE_PUBLISHER_JWT_KEY: 'ItsJust4AGame'
+          MERCURE_SUBSCRIBER_JWT_KEY: 'ItsJust4AGame'
+          # Set the URL of your Symfony project (without trailing slash!) as value of the cors_origins directive
+          MERCURE_EXTRA_DIRECTIVES: |
+            cors_origins *
+        # Comment the following line to disable the development mode
+        command: /usr/bin/caddy run --config /etc/caddy/dev.Caddyfile
+###< symfony/mercure-bundle ###
