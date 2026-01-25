@@ -26,6 +26,9 @@ class Player
     #[ORM\Column]
     private ?int $wins = null;
 
+    #[ORM\Column]
+    private ?\DateTime $lastHeartbeat = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -75,6 +78,18 @@ class Player
     public function setWins(int $wins): static
     {
         $this->wins = $wins;
+
+        return $this;
+    }
+
+    public function getLastHeartbeat(): ?\DateTime
+    {
+        return $this->lastHeartbeat;
+    }
+
+    public function setLastHeartbeat(\DateTime $lastHeartbeat): static
+    {
+        $this->lastHeartbeat = $lastHeartbeat;
 
         return $this;
     }

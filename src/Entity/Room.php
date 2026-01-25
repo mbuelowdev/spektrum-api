@@ -25,14 +25,38 @@ class Room
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
-    #[ORM\OneToOne(cascade: ['persist', 'remove'])]
-    private ?Game $activeGame = null;
-
     /**
      * @var Collection<int, Player>
      */
     #[ORM\ManyToMany(targetEntity: Player::class)]
     private Collection $players;
+
+    #[ORM\Column(type: Types::ARRAY)]
+    private array $playersTeamA = [];
+
+    #[ORM\Column(type: Types::ARRAY)]
+    private array $playersTeamB = [];
+
+    #[ORM\Column(nullable: true)]
+    private ?int $pointsTeamA = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $pointsTeamB = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $gameState = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $activePlayer = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $roundIndex = null;
+
+    #[ORM\Column(type: Types::ARRAY, nullable: true)]
+    private ?array $playedCards = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $activeCard = null;
 
     public function __construct()
     {
@@ -80,18 +104,6 @@ class Room
         return $this;
     }
 
-    public function getActiveGame(): ?Game
-    {
-        return $this->activeGame;
-    }
-
-    public function setActiveGame(?Game $activeGame): static
-    {
-        $this->activeGame = $activeGame;
-
-        return $this;
-    }
-
     /**
      * @return Collection<int, Player>
      */
@@ -112,6 +124,114 @@ class Room
     public function removePlayer(Player $player): static
     {
         $this->players->removeElement($player);
+
+        return $this;
+    }
+
+    public function getPlayersTeamA(): array
+    {
+        return $this->playersTeamA;
+    }
+
+    public function setPlayersTeamA(array $playersTeamA): static
+    {
+        $this->playersTeamA = $playersTeamA;
+
+        return $this;
+    }
+
+    public function getPlayersTeamB(): array
+    {
+        return $this->playersTeamB;
+    }
+
+    public function setPlayersTeamB(array $playersTeamB): static
+    {
+        $this->playersTeamB = $playersTeamB;
+
+        return $this;
+    }
+
+    public function getPointsTeamA(): ?int
+    {
+        return $this->pointsTeamA;
+    }
+
+    public function setPointsTeamA(?int $pointsTeamA): static
+    {
+        $this->pointsTeamA = $pointsTeamA;
+
+        return $this;
+    }
+
+    public function getPointsTeamB(): ?int
+    {
+        return $this->pointsTeamB;
+    }
+
+    public function setPointsTeamB(?int $pointsTeamB): static
+    {
+        $this->pointsTeamB = $pointsTeamB;
+
+        return $this;
+    }
+
+    public function getGameState(): ?string
+    {
+        return $this->gameState;
+    }
+
+    public function setGameState(?string $gameState): static
+    {
+        $this->gameState = $gameState;
+
+        return $this;
+    }
+
+    public function getActivePlayer(): ?string
+    {
+        return $this->activePlayer;
+    }
+
+    public function setActivePlayer(?string $activePlayer): static
+    {
+        $this->activePlayer = $activePlayer;
+
+        return $this;
+    }
+
+    public function getRoundIndex(): ?int
+    {
+        return $this->roundIndex;
+    }
+
+    public function setRoundIndex(?int $roundIndex): static
+    {
+        $this->roundIndex = $roundIndex;
+
+        return $this;
+    }
+
+    public function getPlayedCards(): ?array
+    {
+        return $this->playedCards;
+    }
+
+    public function setPlayedCards(?array $playedCards): static
+    {
+        $this->playedCards = $playedCards;
+
+        return $this;
+    }
+
+    public function getActiveCard(): ?int
+    {
+        return $this->activeCard;
+    }
+
+    public function setActiveCard(?int $activeCard): static
+    {
+        $this->activeCard = $activeCard;
 
         return $this;
     }
