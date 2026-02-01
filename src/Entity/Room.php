@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: RoomRepository::class)]
 class Room
@@ -17,6 +18,7 @@ class Room
     private ?int $id = null;
 
     #[ORM\Column(type: Types::GUID)]
+    #[Groups(['default'])]
     private ?string $uuid = null;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -29,38 +31,70 @@ class Room
      * @var Collection<int, Player>
      */
     #[ORM\ManyToMany(targetEntity: Player::class)]
-    private Collection $players;
+    #[ORM\JoinTable(name: 'room_players_team_a')]
+    #[Groups(['default'])]
+    private Collection $playersTeamA;
 
-    #[ORM\Column(type: Types::ARRAY)]
-    private array $playersTeamA = [];
+    /**
+     * @var Collection<int, Player>
+     */
+    #[ORM\ManyToMany(targetEntity: Player::class)]
+    #[ORM\JoinTable(name: 'room_players_team_b')]
+    #[Groups(['default'])]
+    private Collection $playersTeamB;
 
-    #[ORM\Column(type: Types::ARRAY)]
-    private array $playersTeamB = [];
-
-    #[ORM\Column(nullable: true)]
-    private ?int $pointsTeamA = null;
-
-    #[ORM\Column(nullable: true)]
-    private ?int $pointsTeamB = null;
+    /**
+     * @var Collection<int, Card>
+     */
+    #[ORM\ManyToMany(targetEntity: Card::class)]
+    #[Groups(['default'])]
+    private Collection $playedCards;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['default'])]
     private ?string $gameState = null;
 
+    #[ORM\Column(nullable: true)]
+    #[Groups(['default'])]
+    private ?int $gamePointsTeamA = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(['default'])]
+    private ?int $gamePointsTeamB = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(['default'])]
+    private ?int $gameRoundIndex = null;
+
+    #[ORM\ManyToOne]
+    #[Groups(['default'])]
+    private ?Player $gameActivePlayer = null;
+
+    #[ORM\ManyToOne]
+    #[Groups(['default'])]
+    private ?Card $gameActiveCard = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(['default'])]
+    private ?float $gameTargetDegree = null;
+
     #[ORM\Column(length: 255, nullable: true)]
-    private ?string $activePlayer = null;
+    #[Groups(['default'])]
+    private ?string $gameCluegiverGuessText = null;
 
-    #[ORM\Column(nullable: true)]
-    private ?int $roundIndex = null;
-
-    #[ORM\Column(type: Types::ARRAY, nullable: true)]
-    private ?array $playedCards = null;
-
-    #[ORM\Column(nullable: true)]
-    private ?int $activeCard = null;
+    /**
+     * @var Collection<int, Guess>
+     */
+    #[ORM\OneToMany(targetEntity: Guess::class, mappedBy: 'room')]
+    #[Groups(['default'])]
+    private Collection $gameGuesses;
 
     public function __construct()
     {
-        $this->players = new ArrayCollection();
+        $this->playersTeamA = new ArrayCollection();
+        $this->playersTeamB = new ArrayCollection();
+        $this->playedCards = new ArrayCollection();
+        $this->gameGuesses = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -104,74 +138,26 @@ class Room
         return $this;
     }
 
-    /**
-     * @return Collection<int, Player>
-     */
-    public function getPlayers(): Collection
+    public function getGamePointsTeamA(): ?int
     {
-        return $this->players;
+        return $this->gamePointsTeamA;
     }
 
-    public function addPlayer(Player $player): static
+    public function setGamePointsTeamA(?int $gamePointsTeamA): static
     {
-        if (!$this->players->contains($player)) {
-            $this->players->add($player);
-        }
+        $this->gamePointsTeamA = $gamePointsTeamA;
 
         return $this;
     }
 
-    public function removePlayer(Player $player): static
+    public function getGamePointsTeamB(): ?int
     {
-        $this->players->removeElement($player);
-
-        return $this;
+        return $this->gamePointsTeamB;
     }
 
-    public function getPlayersTeamA(): array
+    public function setGamePointsTeamB(?int $gamePointsTeamB): static
     {
-        return $this->playersTeamA;
-    }
-
-    public function setPlayersTeamA(array $playersTeamA): static
-    {
-        $this->playersTeamA = $playersTeamA;
-
-        return $this;
-    }
-
-    public function getPlayersTeamB(): array
-    {
-        return $this->playersTeamB;
-    }
-
-    public function setPlayersTeamB(array $playersTeamB): static
-    {
-        $this->playersTeamB = $playersTeamB;
-
-        return $this;
-    }
-
-    public function getPointsTeamA(): ?int
-    {
-        return $this->pointsTeamA;
-    }
-
-    public function setPointsTeamA(?int $pointsTeamA): static
-    {
-        $this->pointsTeamA = $pointsTeamA;
-
-        return $this;
-    }
-
-    public function getPointsTeamB(): ?int
-    {
-        return $this->pointsTeamB;
-    }
-
-    public function setPointsTeamB(?int $pointsTeamB): static
-    {
-        $this->pointsTeamB = $pointsTeamB;
+        $this->gamePointsTeamB = $gamePointsTeamB;
 
         return $this;
     }
@@ -188,50 +174,184 @@ class Room
         return $this;
     }
 
-    public function getActivePlayer(): ?string
+    public function getGameRoundIndex(): ?int
     {
-        return $this->activePlayer;
+        return $this->gameRoundIndex;
     }
 
-    public function setActivePlayer(?string $activePlayer): static
+    public function setGameRoundIndex(?int $gameRoundIndex): static
     {
-        $this->activePlayer = $activePlayer;
+        $this->gameRoundIndex = $gameRoundIndex;
 
         return $this;
     }
 
-    public function getRoundIndex(): ?int
+    /**
+     * @return Collection<int, Player>
+     */
+    public function getPlayersTeamA(): Collection
     {
-        return $this->roundIndex;
+        return $this->playersTeamA;
     }
 
-    public function setRoundIndex(?int $roundIndex): static
+    public function addPlayersTeamA(Player $playersTeamA): static
     {
-        $this->roundIndex = $roundIndex;
+        if (!$this->playersTeamA->contains($playersTeamA)) {
+            $this->playersTeamA->add($playersTeamA);
+        }
 
         return $this;
     }
 
-    public function getPlayedCards(): ?array
+    public function removePlayersTeamA(Player $playersTeamA): static
+    {
+        $this->playersTeamA->removeElement($playersTeamA);
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Player>
+     */
+    public function getPlayersTeamB(): Collection
+    {
+        return $this->playersTeamB;
+    }
+
+    /**
+     * @return Collection<int, Player>
+     */
+    public function getPlayers(): Collection
+    {
+        return new ArrayCollection(array_merge(
+            $this->playersTeamA->toArray(),
+            $this->playersTeamB->toArray()
+        ));
+    }
+
+    public function addPlayersTeamB(Player $playersTeamB): static
+    {
+        if (!$this->playersTeamB->contains($playersTeamB)) {
+            $this->playersTeamB->add($playersTeamB);
+        }
+
+        return $this;
+    }
+
+    public function removePlayersTeamB(Player $playersTeamB): static
+    {
+        $this->playersTeamB->removeElement($playersTeamB);
+
+        return $this;
+    }
+
+    public function getGameActivePlayer(): ?Player
+    {
+        return $this->gameActivePlayer;
+    }
+
+    public function setGameActivePlayer(?Player $gameActivePlayer): static
+    {
+        $this->gameActivePlayer = $gameActivePlayer;
+
+        return $this;
+    }
+
+    public function getGameActiveCard(): ?Card
+    {
+        return $this->gameActiveCard;
+    }
+
+    public function setGameActiveCard(?Card $gameActiveCard): static
+    {
+        $this->gameActiveCard = $gameActiveCard;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Card>
+     */
+    public function getPlayedCards(): Collection
     {
         return $this->playedCards;
     }
 
-    public function setPlayedCards(?array $playedCards): static
+    public function addPlayedCard(Card $playedCard): static
     {
-        $this->playedCards = $playedCards;
+        if (!$this->playedCards->contains($playedCard)) {
+            $this->playedCards->add($playedCard);
+        }
 
         return $this;
     }
 
-    public function getActiveCard(): ?int
+    public function removePlayedCard(Card $playedCard): static
     {
-        return $this->activeCard;
+        $this->playedCards->removeElement($playedCard);
+
+        return $this;
     }
 
-    public function setActiveCard(?int $activeCard): static
+    public function removeAllPlayedCards(): static
     {
-        $this->activeCard = $activeCard;
+        $this->playedCards = new ArrayCollection();
+
+        return $this;
+    }
+
+    public function getGameTargetDegree(): ?float
+    {
+        return $this->gameTargetDegree;
+    }
+
+    public function setGameTargetDegree(?float $gameTargetDegree): static
+    {
+        $this->gameTargetDegree = $gameTargetDegree;
+
+        return $this;
+    }
+
+    public function getGameCluegiverGuessText(): ?string
+    {
+        return $this->gameCluegiverGuessText;
+    }
+
+    public function setGameCluegiverGuessText(?string $gameCluegiverGuessText): static
+    {
+        $this->gameCluegiverGuessText = $gameCluegiverGuessText;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Guess>
+     */
+    public function getGameGuesses(): Collection
+    {
+        return $this->gameGuesses;
+    }
+
+    public function addGameGuess(Guess $gameGuess): static
+    {
+        if (!$this->gameGuesses->contains($gameGuess)) {
+            $this->gameGuesses->add($gameGuess);
+            $gameGuess->setRoom($this);
+        }
+
+        return $this;
+    }
+
+    public function removeGameGuess(Guess $gameGuess): static
+    {
+        $this->gameGuesses->removeElement($gameGuess);
+
+        return $this;
+    }
+
+    public function removeAllGameGuesses(): static
+    {
+        $this->gameGuesses = new ArrayCollection();
 
         return $this;
     }

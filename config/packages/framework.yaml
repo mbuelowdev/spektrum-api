@@ -10,6 +10,10 @@ framework:
     trusted_proxies: '172.17.0.1,127.0.0.1'
     trusted_headers: ['x-forwarded-for']
 
+    serializer:
+        default_context:
+            groups: [ 'default' ]
+
 when@test:
     framework:
         test: true

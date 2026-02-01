@@ -3,8 +3,11 @@
 namespace App\Entity;
 
 use App\Repository\PlayerRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: PlayerRepository::class)]
 class Player
@@ -15,9 +18,11 @@ class Player
     private ?int $id = null;
 
     #[ORM\Column(type: Types::GUID)]
+    #[Groups(['default'])]
     private ?string $uuid = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['default'])]
     private ?string $name = null;
 
     #[ORM\Column(type: Types::BLOB, nullable: true)]
@@ -27,7 +32,19 @@ class Player
     private ?int $wins = null;
 
     #[ORM\Column]
+    #[Groups(['default'])]
     private ?\DateTime $lastHeartbeat = null;
+
+    /**
+     * @var Collection<int, Guess>
+     */
+    #[ORM\OneToMany(targetEntity: Guess::class, mappedBy: 'player')]
+    private Collection $guesses;
+
+    public function __construct()
+    {
+        $this->guesses = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -90,6 +107,36 @@ class Player
     public function setLastHeartbeat(\DateTime $lastHeartbeat): static
     {
         $this->lastHeartbeat = $lastHeartbeat;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Guess>
+     */
+    public function getGuesses(): Collection
+    {
+        return $this->guesses;
+    }
+
+    public function addGuess(Guess $guess): static
+    {
+        if (!$this->guesses->contains($guess)) {
+            $this->guesses->add($guess);
+            $guess->setPlayer($this);
+        }
+
+        return $this;
+    }
+
+    public function removeGuess(Guess $guess): static
+    {
+        if ($this->guesses->removeElement($guess)) {
+            // set the owning side to null (unless already changed)
+            if ($guess->getPlayer() === $this) {
+                $guess->setPlayer(null);
+            }
+        }
 
         return $this;
     }

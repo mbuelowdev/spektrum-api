@@ -29,69 +29,26 @@ final class RoomController extends AbstractController
 {
     public function __construct(
         public GameLogicModel $gameLogicModel,
+        public RoomRepository $roomRepository,
+        public PlayerRepository $playerRepository,
+        public EntityManagerInterface $entityManager,
+        public HubInterface $hub,
     ) {}
 
     #[Route('/room/{uuid}', name: 'app_room_status', methods: ['GET'])]
-    public function app_room_status(
-        string $uuid,
-        RoomRepository $roomRepository,
-        PlayerRepository $playerRepository,
-    ): JsonResponse
+    public function app_room_status(string $uuid): JsonResponse
     {
-        $room = $roomRepository->findOneBy(['uuid' => $uuid]);
+        $room = $this->roomRepository->findOneBy(['uuid' => $uuid]);
 
         if ($room === null) {
             throw new NotFoundHttpException('No room found for uuid: ' . $uuid);
         }
 
-        $arrPlayers = [];
-        foreach ($room->getPlayers() as $player) {
-            $tmp = [];
-            $tmp['uuid'] = $player->getUuid();
-            $tmp['name'] = $player->getName();
-            $arrPlayers[] = $tmp;
-        }
-
-        $arrPlayersTeamA = $playerRepository->findBy(['uuid' => $room->getPlayersTeamA()]);
-        $arrPlayersTeamA = array_map(function (Player $player) {
-            $tmp = [];
-            $tmp['uuid'] = $player->getUuid();
-            $tmp['name'] = $player->getName();
-
-            return $tmp;
-        }, $arrPlayersTeamA);
-
-        $arrPlayersTeamB = $playerRepository->findBy(['uuid' => $room->getPlayersTeamB()]);
-        $arrPlayersTeamB = array_map(function (Player $player) {
-            $tmp = [];
-            $tmp['uuid'] = $player->getUuid();
-            $tmp['name'] = $player->getName();
-
-            return $tmp;
-        }, $arrPlayersTeamB);
-
-//        $arrPlayersTeamB = [];
-//        foreach ($room->getPlayersTeamB() as $player) {
-//            $tmp = [];
-//            $tmp['uuid'] = $player->getUuid();
-//            $tmp['name'] = $player->getName();
-//            $arrPlayersTeamB[] = $tmp;
-//        }
-
-        return $this->json([
-            'uuid' => $uuid,
-            'players' => $arrPlayers,
-            'playersTeamA' => $arrPlayersTeamA,
-            'playersTeamB' => $arrPlayersTeamB,
-            ...$this->gameLogicModel->getGameStateArray($room)
-        ]);
+        return $this->json($room);
     }
 
     #[Route('/room/create', name: 'app_room_create', methods: ['POST'])]
-    public function app_room_create(
-        #[MapRequestPayload] CreateRoomDto $dto,
-        EntityManagerInterface $entityManager
-    ): JsonResponse {
+    public function app_room_create(#[MapRequestPayload] CreateRoomDto $dto): JsonResponse {
 
         $uuid = Uuid::v4();
 
@@ -102,30 +59,22 @@ final class RoomController extends AbstractController
         $room->setCreatedAt(new \DateTimeImmutable());
 
         // Persist to database
-        $entityManager->persist($room);
-        $entityManager->flush();
+        $this->entityManager->persist($room);
+        $this->entityManager->flush();
 
         // Return the UUID
-        return $this->json([
-            'uuid' => $uuid,
-        ]);
+        return $this->json($room);
     }
 
     #[Route('/room/join', name: 'app_room_join', methods: ['POST'])]
-    public function app_room_join(
-        #[MapRequestPayload] JoinRoomDto $dto,
-        RoomRepository $roomRepository,
-        PlayerRepository $playerRepository,
-        EntityManagerInterface $entityManager,
-        HubInterface $hub,
-    ): JsonResponse {
+    public function app_room_join(#[MapRequestPayload] JoinRoomDto $dto,): JsonResponse {
 
-        $room = $roomRepository->findOneBy(['uuid' => $dto->uuidRoom]);
+        $room = $this->roomRepository->findOneBy(['uuid' => $dto->uuidRoom]);
         if ($room === null) {
             throw new NotFoundHttpException('Failed to find given room.');
         }
 
-        $player = $playerRepository->findOneBy(['uuid' => $dto->uuidPlayer]);
+        $player = $this->playerRepository->findOneBy(['uuid' => $dto->uuidPlayer]);
         if ($player === null) {
             throw new NotFoundHttpException('Failed to find given player.');
         }
@@ -142,46 +91,31 @@ final class RoomController extends AbstractController
             ]);
         }
 
-        // Add player to room
-        $room->addPlayer($player);
+        // Add player to room, update activity state
+        $room->addPlayersTeamA($player);
         $player->setLastHeartbeat(new \DateTime());
 
-        $entityManager->persist($room);
-        $entityManager->persist($player);
-        $entityManager->flush();
+        $this->entityManager->persist($room);
+        $this->entityManager->persist($player);
+        $this->entityManager->flush();
 
         // Inform subscribers about changes
-        $update = new Update(
-            'room-' . $room->getUuid(),
-            json_encode([
-                'action' => RoomEvents::$PLAYER_JOINED,
-                'playerUuid' => $player->getUuid(),
-                'playerName' => $player->getName(),
-            ]),
-        );
-        $hub->publish($update);
+        $this->gameLogicModel->pushRoomUpdate($room);
 
-        // Return the UUID
+        // Response
         return $this->json([
             'message' => 'Successfully joined the room ' . $dto->uuidRoom . '.',
         ]);
     }
 
     #[Route('/room/switch-team', name: 'app_room_switch_team', methods: ['POST'])]
-    public function app_room_switch_team(
-        #[MapRequestPayload] SwitchTeamDto $dto,
-        RoomRepository $roomRepository,
-        PlayerRepository $playerRepository,
-        EntityManagerInterface $entityManager,
-        HubInterface $hub,
-    ): JsonResponse {
-
-        $room = $roomRepository->findOneBy(['uuid' => $dto->uuidRoom]);
+    public function app_room_switch_team(#[MapRequestPayload] SwitchTeamDto $dto): JsonResponse {
+        $room = $this->roomRepository->findOneBy(['uuid' => $dto->uuidRoom]);
         if ($room === null) {
             throw new NotFoundHttpException('Failed to find given room.');
         }
 
-        $player = $playerRepository->findOneBy(['uuid' => $dto->uuidPlayer]);
+        $player = $this->playerRepository->findOneBy(['uuid' => $dto->uuidPlayer]);
         if ($player === null) {
             throw new NotFoundHttpException('Failed to find given player.');
         }
@@ -192,34 +126,31 @@ final class RoomController extends AbstractController
             ]);
         }
 
+        if ($room->getGameState() != null) {
+            return $this->json([
+                'message' => 'Game has already started.',
+            ]);
+        }
+
         switch ($dto->team) {
             case 'A':
-                $room->setPlayersTeamA(array_unique([...$room->getPlayersTeamA(), $dto->uuidPlayer]));
-                $room->setPlayersTeamB(array_diff($room->getPlayersTeamB(), [$dto->uuidPlayer]));
+                $room->addPlayersTeamA($player);
+                $room->removePlayersTeamB($player);
                 break;
             case 'B':
-                $room->setPlayersTeamA(array_diff($room->getPlayersTeamA(), [$dto->uuidPlayer]));
-                $room->setPlayersTeamB(array_unique([...$room->getPlayersTeamB(), $dto->uuidPlayer]));
+                $room->addPlayersTeamB($player);
+                $room->removePlayersTeamA($player);
                 break;
             default:
                 throw new BadRequestException('Unknown team.');
         }
 
 
-        $entityManager->persist($room);
-        $entityManager->flush();
+        $this->entityManager->persist($room);
+        $this->entityManager->flush();
 
         // Inform subscribers about changes
-        $update = new Update(
-            'room-' . $room->getUuid(),
-            json_encode([
-                'action' => RoomEvents::$PLAYER_SWITCHED_TEAMS,
-                'newTeam' => $dto->team,
-                'playerUuid' => $player->getUuid(),
-                'playerName' => $player->getName(),
-            ]),
-        );
-        $hub->publish($update);
+        $this->gameLogicModel->pushRoomUpdate($room);
 
         // Return the UUID
         return $this->json([
@@ -228,43 +159,29 @@ final class RoomController extends AbstractController
     }
 
     #[Route('/room/{uuid}/refresh', name: 'app_room_refresh', methods: ['POST'])]
-    public function app_room_refresh(
-        string $uuid,
-        RoomRepository $roomRepository,
-        EntityManagerInterface $entityManager,
-        HubInterface $hub,
-    ): JsonResponse {
+    public function app_room_refresh(string $uuid): JsonResponse {
 
-        $room = $roomRepository->findOneBy(['uuid' => $uuid]);
+        $room = $this->roomRepository->findOneBy(['uuid' => $uuid]);
 
         if ($room === null) {
             throw new NotFoundHttpException('Failed to find given room.');
         }
 
-        $timeoutThreshold = (new \DateTimeImmutable())->modify('-' . 60 . ' seconds');
+//        $timeoutThreshold = (new \DateTimeImmutable())->modify('-' . 60 . ' seconds');
+//        foreach ($room->getPlayers() as $player) {
+//            // if player heartbeat older than 60 seconds
+//            if ($player->getLastHeartbeat() !== null && $player->getLastHeartbeat() < $timeoutThreshold) {
+//                $room->removePlayersTeamA($player);
+//                $room->removePlayersTeamB($player);
+//            }
+//        }
 
-        foreach ($room->getPlayers() as $player) {
-            // if player heartbeat older than 60 seconds
-            if ($player->getLastHeartbeat() !== null && $player->getLastHeartbeat() < $timeoutThreshold) {
-                $room->removePlayer($player);
-                $room->setPlayersTeamA(array_diff($room->getPlayersTeamA(), [$player->getUuid()]));
-                $room->setPlayersTeamB(array_diff($room->getPlayersTeamB(), [$player->getUuid()]));
-
-                $update = new Update(
-                    'room-' . $room->getUuid(),
-                    json_encode([
-                        'action' => RoomEvents::$PLAYER_LEFT,
-                        'playerUuid' => $player->getUuid(),
-                        'playerName' => $player->getName(),
-                    ]),
-                );
-                $hub->publish($update);
-            }
-        }
+        // Inform subscribers about changes
+        $this->gameLogicModel->pushRoomUpdate($room);
 
         // Persist to database
-        $entityManager->persist($room);
-        $entityManager->flush();
+        $this->entityManager->persist($room);
+        $this->entityManager->flush();
 
         // Return the UUID
         return $this->json([
@@ -273,58 +190,18 @@ final class RoomController extends AbstractController
     }
 
     #[Route('/room/{uuid}/game-action', name: 'app_room_game_action', methods: ['POST'])]
-    public function app_room_game_action(
-        string $uuid,
-        #[MapRequestPayload] GameActionDto $dto,
-        RoomRepository $roomRepository,
-        EntityManagerInterface $entityManager,
-        HubInterface $hub,
-    ): JsonResponse {
+    public function app_room_game_action(string $uuid, #[MapRequestPayload] GameActionDto $dto): JsonResponse {
 
-        $room = $roomRepository->findOneBy(['uuid' => $uuid]);
+        $room = $this->roomRepository->findOneBy(['uuid' => $uuid]);
 
         if ($room === null) {
             throw new NotFoundHttpException('Failed to find given room.');
         }
 
-        // Create a new game
-        if ($dto->action === GameActions::$CREATE_NEW_GAME) {
-            $room->setPointsTeamA(0);
-            $room->setPointsTeamB(1);
-            $room->setGameState(GameStates::$STATE_00_START);
-            $room->setRoundIndex(0);
-            $room->setPlayedCards([]);
-            $room->setActivePlayer($room->getPlayersTeamA()[0]);
+        $this->gameLogicModel->executeGameAction($room, $dto);
 
-            $entityManager->persist($room);
-            $entityManager->flush();
-
-            $update = new Update(
-                'room-' . $room->getUuid(),
-                json_encode([
-                    'action' => RoomEvents::$GAME_STATUS_UPDATE,
-                    ...$this->gameLogicModel->getGameStateArray($room)
-                ]),
-            );
-            $hub->publish($update);
-
-            return $this->json([
-                'message' => 'Started game.',
-                ...$this->gameLogicModel->getGameStateArray($room)
-            ]);
-        }
-
-        if ($dto->action === GameActions::$NEW_CARDS || $dto->action === GameActions::$NEW_OR_OLD_CARDS) {
-            $alsoUseOldCards = $dto->action === GameActions::$NEW_OR_OLD_CARDS;
-            $card = $this->gameLogicModel->getUnplayedCard($room, $alsoUseOldCards);
-
-            return $this->json([
-                'cardId' => $card->getId(),
-                'cardValueLeft' => $card->getValueLeft(),
-                'cardValueRight' => $card->getValueRight(),
-            ]);
-        }
-
-        throw new \Exception('Unsupported action.');
+        return $this->json([
+            'message' => 'Successfully executed game action.',
+        ]);
     }
 }

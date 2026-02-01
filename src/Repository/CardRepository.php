@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Card;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -17,15 +18,17 @@ class CardRepository extends ServiceEntityRepository
     }
 
         /**
+         * @var Collection<int, Card> $cards
          * @return Card[] Returns an array of Card objects
          */
-        public function findAllNotIn($arrCardIds): array
+        public function findAllNotIn($cards): array
         {
             $qb = $this->createQueryBuilder('c');
 
-            if (!empty($arrCardIds)) {
+            if (!$cards->isEmpty()) {
+                $ids = $cards->map(fn (Card $card) => $card->getId())->toArray();
                 $qb->andWhere($qb->expr()->notIn('c.id', ':ids'))
-                   ->setParameter('ids', $arrCardIds);
+                   ->setParameter('ids', $ids);
             }
 
             return $qb

@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\CardRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: CardRepository::class)]
 class Card
@@ -11,12 +12,15 @@ class Card
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['default'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['default'])]
     private ?string $valueLeft = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['default'])]
     private ?string $valueRight = null;
 
     public function getId(): ?int
