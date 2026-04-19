@@ -27,7 +27,7 @@
         "tag": "latest",
         "argPorts": "-p 172.17.0.1:16011:80",
         "argVolumes": "",
-        "argExtra": "-e SERVER_NAME=':80' -e MERCURE_PUBLISHER_JWT_KEY=9bqJBJrVqvuqkVHkbLaIdCwH9vxGsmVC -e MERCURE_SUBSCRIBER_JWT_KEY=9bqJBJrVqvuqkVHkbLaIdCwH9vxGsmVC -e MERCURE_EXTRA_DIRECTIVES='cors_origins *'"
+        "argExtra": "-e SERVER_NAME=':80' -e MERCURE_PUBLISHER_JWT_KEY=9bqJBJrVqvuqkVHkbLaIdCwH9vxGsmVC -e MERCURE_EXTRA_DIRECTIVES='cors_origins *'"
     }
   ]
 }
