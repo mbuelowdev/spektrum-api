@@ -222,8 +222,8 @@ class GameLogicModel
         $this->entityManager->persist($player);
 
         $isEvenRound = $room->getGameRoundIndex() % 2 === 0;
-        $isGuessRound = $room->getGameState() !== GameStates::$STATE_02_GUESS_ROUND;
-        $isCounterGuessRound = $room->getGameState() !== GameStates::$STATE_03_COUNTER_GUESS_ROUND;
+        $isGuessRound = $room->getGameState() === GameStates::$STATE_02_GUESS_ROUND;
+        $isCounterGuessRound = $room->getGameState() === GameStates::$STATE_03_COUNTER_GUESS_ROUND;
 
         $isTeamATurn = ($isEvenRound && $isGuessRound) || (!$isEvenRound && $isCounterGuessRound);
         $arrPlayingPlayers = $isTeamATurn ? $room->getPlayersTeamA() : $room->getPlayersTeamB();
@@ -236,9 +236,14 @@ class GameLogicModel
             }
         }
 
-        $isRoundOver = count($arrFinalGuessesPlayingTeam) === (count($arrPlayingPlayers) - 1);
+        // One less player needed because in a guess round one player is the cluegiver instead of a player
+        $quantityOfPlayingPlayers = $isGuessRound ? (count($arrPlayingPlayers) - 1) : count($arrPlayingPlayers);
+        $isRoundOver = count($arrFinalGuessesPlayingTeam) === $quantityOfPlayingPlayers;
         if ($isRoundOver && ($room->getGameState() === GameStates::$STATE_02_GUESS_ROUND || $room->getGameState() === GameStates::$STATE_03_COUNTER_GUESS_ROUND)) {
             $room->setGameState(GameStates::getNextState($room->getGameState()));
+            if ($room->getGameState() === GameStates::$STATE_04_REVEAL) {
+                $this->applyRevealScoring($room);
+            }
         }
 
         $this->entityManager->persist($guess);
@@ -272,10 +277,118 @@ class GameLogicModel
             return;
         }
 
-        //TODO Set points based on answers
+        $this->lockInCounterTeamPreviewGuesses($room);
+        $this->applyRevealScoring($room);
 
         $room->setGameState(GameStates::getNextState($room->getGameState()));
 
         $this->entityManager->persist($room);
+    }
+
+    /**
+     * Even round index: team A guesses, team B counters. Odd: team B guesses, team A counters.
+     */
+    private function guessingTeamIsTeamA(Room $room): bool
+    {
+        return $room->getGameRoundIndex() % 2 === 0;
+    }
+
+    /**
+     * @return list<float>
+     */
+    private function nonPreviewGuessDegreesForTeam(Room $room, $teamPlayers): array
+    {
+        $degrees = [];
+        foreach ($teamPlayers as $player) {
+            foreach ($player->getGuesses() as $guess) {
+                if ($guess->getRoom() === $room && !$guess->isPreview()) {
+                    $degrees[] = $guess->getDegree();
+                }
+            }
+        }
+
+        return $degrees;
+    }
+
+    private function lockInCounterTeamPreviewGuesses(Room $room): void
+    {
+        $counterPlayers = $this->guessingTeamIsTeamA($room)
+            ? $room->getPlayersTeamB()
+            : $room->getPlayersTeamA();
+
+        foreach ($counterPlayers as $player) {
+            foreach ($player->getGuesses() as $guess) {
+                if ($guess->getRoom() === $room && $guess->isPreview()) {
+                    $guess->setIsPreview(false);
+                }
+            }
+        }
+    }
+
+    private function applyRevealScoring(Room $room): void
+    {
+        $target = $room->getGameTargetDegree();
+        if ($target === null) {
+            return;
+        }
+
+        $guessingTeamA = $this->guessingTeamIsTeamA($room);
+        $guessingPlayers = $guessingTeamA ? $room->getPlayersTeamA() : $room->getPlayersTeamB();
+        $counterPlayers = $guessingTeamA ? $room->getPlayersTeamB() : $room->getPlayersTeamA();
+
+        $guessingDegrees = $this->nonPreviewGuessDegreesForTeam($room, $guessingPlayers);
+        $counterDegrees = $this->nonPreviewGuessDegreesForTeam($room, $counterPlayers);
+
+        $guessingAvg = count($guessingDegrees) > 0
+            ? array_sum($guessingDegrees) / count($guessingDegrees)
+            : null;
+        $counterAvg = count($counterDegrees) > 0
+            ? array_sum($counterDegrees) / count($counterDegrees)
+            : 80.0;
+
+        $guessingPoints = $guessingAvg !== null
+            ? $this->pointsForGuessingTeamDistance(abs($guessingAvg - $target))
+            : 0;
+
+        $counterCloserPoint = 0;
+        if ($guessingAvg !== null) {
+            $guessingDist = abs($guessingAvg - $target);
+            $counterDist = abs($counterAvg - $target);
+            if ($counterDist < $guessingDist) {
+                $counterCloserPoint = 1;
+            }
+        }
+
+        $pointsA = $room->getGamePointsTeamA() ?? 0;
+        $pointsB = $room->getGamePointsTeamB() ?? 0;
+
+        if ($guessingTeamA) {
+            $pointsA += $guessingPoints;
+            $pointsB += $counterCloserPoint;
+        } else {
+            $pointsB += $guessingPoints;
+            $pointsA += $counterCloserPoint;
+        }
+
+        $room->setGamePointsTeamA($pointsA);
+        $room->setGamePointsTeamB($pointsB);
+    }
+
+    /**
+     * Single best tier — bands do not stack. Degrees are absolute distance to target.
+     */
+    private function pointsForGuessingTeamDistance(float $distance): int
+    {
+        if ($distance <= 4.5) {
+            return 4;
+        }
+        if ($distance <= 13.5) {
+            return 3;
+        }
+        if ($distance <= 22.5) {
+            return 2;
+        }
+
+        return 0;
     }
 }
