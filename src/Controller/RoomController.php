@@ -15,6 +15,7 @@ use App\Model\GameLogicModel;
 use App\Repository\PlayerRepository;
 use App\Repository\RoomRepository;
 use Symfony\Component\HttpFoundation\Exception\BadRequestException;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
@@ -24,6 +25,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Serializer\SerializerInterface;
 
 final class RoomController extends AbstractController
 {
@@ -33,6 +36,7 @@ final class RoomController extends AbstractController
         public PlayerRepository $playerRepository,
         public EntityManagerInterface $entityManager,
         public HubInterface $hub,
+        public SerializerInterface $serializer,
     ) {}
 
     #[Route('/room/{uuid}', name: 'app_room_status', methods: ['GET'])]
@@ -67,8 +71,8 @@ final class RoomController extends AbstractController
     }
 
     #[Route('/room/join', name: 'app_room_join', methods: ['POST'])]
-    public function app_room_join(#[MapRequestPayload] JoinRoomDto $dto,): JsonResponse {
-
+    public function app_room_join(#[MapRequestPayload] JoinRoomDto $dto,): JsonResponse
+    {
         $room = $this->roomRepository->findOneBy(['uuid' => $dto->uuidRoom]);
         if ($room === null) {
             throw new NotFoundHttpException('Failed to find given room.');

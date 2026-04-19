@@ -17,6 +17,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 use Symfony\Component\Serializer\SerializerInterface;
+use JsonException;
 
 class GameLogicModel
 {
@@ -31,13 +32,52 @@ class GameLogicModel
 
     public function pushRoomUpdate(Room $room): void
     {
+        $payload = $this->serializer->normalize($room, 'array');
+        $payload = $this->forceListSerializationOnCollections($payload);
+
+        try {
+            $payloadJson = json_encode($payload, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            $payloadJson = $this->serializer->serialize($room, 'json');
+        }
+
         // Inform subscribers about changes
         $update = new Update(
             'room-' . $room->getUuid(),
-            $this->serializer->serialize($room, 'json'),
+            $payloadJson,
         );
 
         $this->hub->publish($update);
+    }
+
+    private function forceListSerializationOnCollections(array $payload): array
+    {
+        if ($this->isIntKeyedArray($payload)) {
+            $payload = array_values($payload);
+        }
+
+        foreach ($payload as $key => $value) {
+            if (is_array($value)) {
+                $payload[$key] = $this->forceListSerializationOnCollections($value);
+            }
+        }
+
+        return $payload;
+    }
+
+    private function isIntKeyedArray(array $value): bool
+    {
+        if ($value === []) {
+            return true;
+        }
+
+        foreach (array_keys($value) as $key) {
+            if (!is_int($key)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function getUnplayedCard(Room $room, bool $includeAlreadyPlayedCards = false): Card

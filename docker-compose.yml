@@ -7,9 +7,9 @@ services:
         volumes:
             - ./:/var/www/spektrum
         ports:
-            - "80:80"
+            - "9001:80"
         expose:
-            - "80"
+            - "9001"
 
 ###> symfony/mercure-bundle ###
     mercure:
