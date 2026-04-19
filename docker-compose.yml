@@ -18,14 +18,11 @@ services:
         container_name: spektrum-mercure
         ports:
             - "3000:80"
+        volumes:
+            - ./docker/mercure/Caddyfile:/etc/caddy/Caddyfile:ro
         environment:
           # Uncomment the following line to disable HTTPS,
           SERVER_NAME: ':80'
           MERCURE_PUBLISHER_JWT_KEY: '9bqJBJrVqvuqkVHkbLaIdCwH9vxGsmVC'
           MERCURE_SUBSCRIBER_JWT_KEY: '9bqJBJrVqvuqkVHkbLaIdCwH9vxGsmVC'
-          # Set the URL of your Symfony project (without trailing slash!) as value of the cors_origins directive
-          MERCURE_EXTRA_DIRECTIVES: |
-            cors_origins *
-        # Comment the following line to disable the development mode
-        command: /usr/bin/caddy run --config /etc/caddy/dev.Caddyfile
 ###< symfony/mercure-bundle ###
