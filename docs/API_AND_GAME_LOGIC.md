@@ -248,8 +248,8 @@ Implemented in `GameLogicModel::applyRevealScoring`:
   - ≤ **22.5°** → **2** points  
   - otherwise **0** points  
    (“Distance” is `|averageGuess − target|`.)
-3. **Counter team** can earn **1** bonus point if their average is closer to the target than the guessing team’s average; otherwise **0**.
-4. If the guessing team has **no** final guesses, guessing points are **0**. If the counter team has **no** final guesses, their average is treated as **80.0** for the “who is closer” comparison only.
+3. **Counter team** can earn **1** bonus point for predicting the **side** of the target relative to the guessing team’s average (linear degrees, target = center): if the guessing team scores **4** points (center segment), the counter team gets **0** from this rule. Otherwise, if the guessing average is **left** of the target (`average < target`), the counter team gets **1** if their average is **strictly further left** than the guessing average; if the guessing average is **right** of the target, they get **1** if their average is **strictly further right**; in all other cases **0**.
+4. If the guessing team has **no** final guesses, guessing points are **0**. If the counter team has **no** final guesses, their average is treated as **80.0** for this side comparison only.
 
 Points are added to `gamePointsTeamA` / `gamePointsTeamB`.
 

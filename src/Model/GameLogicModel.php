@@ -390,12 +390,18 @@ class GameLogicModel
             ? $this->pointsForGuessingTeamDistance(abs($guessingAvg - $target))
             : 0;
 
-        $counterCloserPoint = 0;
+        $counterSidePoint = 0;
         if ($guessingAvg !== null) {
-            $guessingDist = abs($guessingAvg - $target);
-            $counterDist = abs($counterAvg - $target);
-            if ($counterDist < $guessingDist) {
-                $counterCloserPoint = 1;
+            if ($guessingPoints === 4) {
+                // Guessing team hit the center segment — no counter bonus for side.
+            } elseif ($guessingAvg < $target) {
+                if ($counterAvg > $guessingAvg) {
+                    $counterSidePoint = 1;
+                }
+            } elseif ($guessingAvg > $target) {
+                if ($counterAvg < $guessingAvg) {
+                    $counterSidePoint = 1;
+                }
             }
         }
 
@@ -404,10 +410,10 @@ class GameLogicModel
 
         if ($guessingTeamA) {
             $pointsA += $guessingPoints;
-            $pointsB += $counterCloserPoint;
+            $pointsB += $counterSidePoint;
         } else {
             $pointsB += $guessingPoints;
-            $pointsA += $counterCloserPoint;
+            $pointsA += $counterSidePoint;
         }
 
         $room->setGamePointsTeamA($pointsA);
@@ -419,13 +425,15 @@ class GameLogicModel
      */
     private function pointsForGuessingTeamDistance(float $distance): int
     {
-        if ($distance <= 4.5) {
+        $segmentSize = 6;
+
+        if ($distance <= ($segmentSize / 2)) {
             return 4;
         }
-        if ($distance <= 13.5) {
+        if ($distance <= (($segmentSize / 2) + $segmentSize)) {
             return 3;
         }
-        if ($distance <= 22.5) {
+        if ($distance <= (($segmentSize / 2) + $segmentSize + $segmentSize)) {
             return 2;
         }
 
