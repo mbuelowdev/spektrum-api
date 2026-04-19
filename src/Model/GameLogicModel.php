@@ -110,29 +110,23 @@ class GameLogicModel
             return;
         }
 
+        $futureGameIndex = $room->getGameRoundIndex() + 1;
+
         // Set active player based on round index and current game state
-        $activePlayers = $room->getGameRoundIndex() % 2 === 0 ? $room->getPlayersTeamA() : $room->getPlayersTeamB();
-        $activePlayerIndex = ($room->getGameRoundIndex() /~ 2) % count($activePlayers);
+        $activePlayers = $futureGameIndex % 2 === 0 ? $room->getPlayersTeamA() : $room->getPlayersTeamB();
+        $activePlayerIndex = (intdiv($futureGameIndex, 2)) % count($activePlayers);
         $room->setGameActivePlayer($activePlayers[$activePlayerIndex]);
 
         $room->setGameState(GameStates::$STATE_00_START);
         $room->setGameTargetDegree(null);
         $room->setGameCluegiverGuessText(null);
-        $room->setGameRoundIndex($room->getGameRoundIndex() + 1);
+        $room->setGameRoundIndex($futureGameIndex);
+        $room->setGameActiveCard($this->getUnplayedCard($room));
 
         foreach ($room->getGameGuesses() as $gameGuesses) {
             $this->entityManager->remove($gameGuesses);
         }
         $room->removeAllGameGuesses();
-
-        // Determine next player
-        // We zip them together in an index based array
-        $arrPlayersTeamA = $room->getPlayersTeamA();
-        $arrPlayersTeamB = $room->getPlayersTeamB();
-
-
-        $room->setGameActivePlayer($room->getPlayersTeamA()->first());
-        $room->setGameActiveCard($this->getUnplayedCard($room));
 
         $this->entityManager->persist($room);
     }
