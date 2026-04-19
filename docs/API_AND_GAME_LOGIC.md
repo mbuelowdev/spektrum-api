@@ -27,9 +27,11 @@ Creates a player record.
 
 **Body:**
 
+
 | Field  | Type   | Required |
-|--------|--------|----------|
+| ------ | ------ | -------- |
 | `name` | string | yes      |
+
 
 **Response (example):**
 
@@ -66,9 +68,11 @@ Creates a room. The **first player to create the room is treated as “admin” 
 
 **Body:**
 
-| Field       | Type   | Required |
-|-------------|--------|----------|
-| `password`  | string | no       |
+
+| Field      | Type   | Required |
+| ---------- | ------ | -------- |
+| `password` | string | no       |
+
 
 **Response:** JSON representation of the new `Room` entity (includes `uuid`, `password` is stored server-side but may not appear in all serializers—verify in your environment).
 
@@ -80,11 +84,13 @@ Adds a player to the room.
 
 **Body:**
 
-| Field       | Type   | Required |
-|-------------|--------|----------|
-| `uuidRoom`  | string | yes      |
-| `uuidPlayer`| string | yes      |
-| `password`  | string | no (required if the room has a password) |
+
+| Field        | Type   | Required                                 |
+| ------------ | ------ | ---------------------------------------- |
+| `uuidRoom`   | string | yes                                      |
+| `uuidPlayer` | string | yes                                      |
+| `password`   | string | no (required if the room has a password) |
+
 
 **Behavior:**
 
@@ -102,11 +108,13 @@ Moves a player between team A and team B.
 
 **Body:**
 
+
 | Field        | Type   | Required |
-|--------------|--------|----------|
+| ------------ | ------ | -------- |
 | `uuidRoom`   | string | yes      |
 | `uuidPlayer` | string | yes      |
 | `team`       | string | yes      |
+
 
 `team` must be `"A"` or `"B"`.
 
@@ -145,11 +153,13 @@ Returns all spectrum cards (id and left/right labels). Gameplay uses whatever ca
 
 Executes one game action. **Every** action uses the same JSON shape:
 
-| Field         | Type   | Required |
-|---------------|--------|----------|
-| `action`      | string | yes      |
-| `uuidPlayer`  | string | yes      |
-| `value`       | string | yes (validator: not blank) |
+
+| Field        | Type   | Required                   |
+| ------------ | ------ | -------------------------- |
+| `action`     | string | yes                        |
+| `uuidPlayer` | string | yes                        |
+| `value`      | string | yes (validator: not blank) |
+
 
 Many actions ignore `uuidPlayer` and/or `value` on the server. Clients should still send valid strings (for example the acting player’s UUID and `"0"` or `"-"` for unused `value`) so validation passes.
 
@@ -165,18 +175,20 @@ After a successful action, the room is flushed and a Mercure update is published
 
 Defined in `App\Dto\GameActions`:
 
-| Value                    | Meaning |
-|--------------------------|---------|
-| `CREATE_NEW_GAME`        | Start or reset the game |
-| `NEW_CARDS`              | Draw a new unplayed card (optional rules below) |
-| `NEW_OR_OLD_CARDS`       | Draw a new card, allowing already-played cards |
-| `START_SPINNING`         | Pick random target degree and advance state |
-| `SUBMIT_CLUEGIVER_CLUE`  | Cluegiver submits sentence/clue (`value`) |
-| `SUBMIT_PREVIEW_GUESS`   | Place or update a **preview** guess (`value` = degree) |
-| `REMOVE_PREVIEW_GUESS`   | Remove preview guesses for `uuidPlayer` |
-| `SUBMIT_GUESS`           | Lock in a non-preview guess (`value` = degree) |
-| `REVEAL`                 | Force reveal from counter-guess state |
-| `NEXT_ROUND`             | Advance to next round after reveal |
+
+| Value                   | Meaning                                                |
+| ----------------------- | ------------------------------------------------------ |
+| `CREATE_NEW_GAME`       | Start or reset the game                                |
+| `NEW_CARDS`             | Draw a new unplayed card (optional rules below)        |
+| `NEW_OR_OLD_CARDS`      | Draw a new card, allowing already-played cards         |
+| `START_SPINNING`        | Pick random target degree and advance state            |
+| `SUBMIT_CLUEGIVER_CLUE` | Cluegiver submits sentence/clue (`value`)              |
+| `SUBMIT_PREVIEW_GUESS`  | Place or update a **preview** guess (`value` = degree) |
+| `REMOVE_PREVIEW_GUESS`  | Remove preview guesses for `uuidPlayer`                |
+| `SUBMIT_GUESS`          | Lock in a non-preview guess (`value` = degree)         |
+| `REVEAL`                | Force reveal from counter-guess state                  |
+| `NEXT_ROUND`            | Advance to next round after reveal                     |
+
 
 (`JOIN_ROOM` / `LEAVE_ROOM` exist in the DTO class but are **not** handled by `executeGameAction`; joining/leaving use the dedicated room endpoints.)
 
@@ -184,13 +196,15 @@ Defined in `App\Dto\GameActions`:
 
 ## Game states (`gameState` on Room)
 
-| State                         | Typical meaning |
-|-------------------------------|-----------------|
-| `STATE_00_START`              | Active player may change card / start spinning |
-| `STATE_01_SHOW_HIDDEN_VALUE`  | Target degree is set; only cluegiver submits clue |
-| `STATE_02_GUESS_ROUND`        | Guessing team places preview/final guesses |
-| `STATE_03_COUNTER_GUESS_ROUND`| Counter-guessing team places preview/final guesses |
-| `STATE_04_REVEAL`             | Points updated; active player may start next round |
+
+| State                          | Typical meaning                                    |
+| ------------------------------ | -------------------------------------------------- |
+| `STATE_00_START`               | Active player may change card / start spinning     |
+| `STATE_01_SHOW_HIDDEN_VALUE`   | Target degree is set; only cluegiver submits clue  |
+| `STATE_02_GUESS_ROUND`         | Guessing team places preview/final guesses         |
+| `STATE_03_COUNTER_GUESS_ROUND` | Counter-guessing team places preview/final guesses |
+| `STATE_04_REVEAL`              | Points updated; active player may start next round |
+
 
 Transitions are enforced in `GameLogicModel`; invalid actions no-op (no error body—check room state via GET/Mercure).
 
@@ -203,13 +217,13 @@ Transitions are enforced in `GameLogicModel`; invalid actions no-op (no error bo
 3. **Join** → `POST /room/join`.
 4. **Teams** → `POST /room/switch-team` until everyone is on A or B.
 5. **Start game** → `game-action` with `CREATE_NEW_GAME`. Requires **both teams non-empty**. Resets played cards and guesses, sets round index to `0`, picks first **active player** from team A and an active card.
-6. **`STATE_00_START`:** Active player may call `NEW_CARDS`, `NEW_OR_OLD_CARDS`, then `START_SPINNING`.
-7. **`START_SPINNING`:** Server sets `gameTargetDegree` to a random value in **0–160** (steps of 0.01°), modeling a usable arc after margins. State becomes `STATE_01_SHOW_HIDDEN_VALUE`.
+6. `**STATE_00_START`:** Active player may call `NEW_CARDS`, `NEW_OR_OLD_CARDS`, then `START_SPINNING`.
+7. `**START_SPINNING`:** Server sets `gameTargetDegree` to a random value in **0–160** (steps of 0.01°), modeling a usable arc after margins. State becomes `STATE_01_SHOW_HIDDEN_VALUE`.
 8. **Clue** → `SUBMIT_CLUEGIVER_CLUE` with the clue in `value`. State becomes `STATE_02_GUESS_ROUND`.
 9. **Guessing team:** Players use `SUBMIT_PREVIEW_GUESS` / `REMOVE_PREVIEW_GUESS` / `SUBMIT_GUESS`. The **cluegiver** (`gameActivePlayer`) cannot submit guesses. Spectators (not on A or B) may only use **preview** guesses, not final ones.
 10. When every **non–active-player** member of the guessing team has a **final** guess, state advances to `STATE_03_COUNTER_GUESS_ROUND`.
-11. **Counter team** repeats preview/final guesses. When all required final guesses are in—or an authorized client sends **`REVEAL`**—the round resolves (see below).
-12. **`STATE_04_REVEAL`:** Points have been applied. **`NEXT_ROUND`** picks the next active player and card and returns to `STATE_00_START`.
+11. **Counter team** repeats preview/final guesses. When all required final guesses are in—or an authorized client sends `**REVEAL`**—the round resolves (see below).
+12. `**STATE_04_REVEAL`:** Points have been applied. `**NEXT_ROUND`** picks the next active player and card and returns to `STATE_00_START`.
 
 ### Which team guesses when
 
@@ -218,8 +232,8 @@ Transitions are enforced in `GameLogicModel`; invalid actions no-op (no error bo
 
 How many final guesses are required:
 
-- In **`STATE_02_GUESS_ROUND`:** all teammates **except the cluegiver** (so `|team| - 1`).
-- In **`STATE_03_COUNTER_GUESS_ROUND`:** all players on the counter team.
+- In `**STATE_02_GUESS_ROUND`:** all teammates **except the cluegiver** (so `|team| - 1`).
+- In `**STATE_03_COUNTER_GUESS_ROUND`:** all players on the counter team.
 
 ---
 
@@ -227,12 +241,12 @@ How many final guesses are required:
 
 Implemented in `GameLogicModel::applyRevealScoring`:
 
-1. **`gameTargetDegree`** is the bullseye.
+1. `**gameTargetDegree`** is the bullseye.
 2. **Guessing team** earns **tier points** from the **average** of their non-preview guesses vs the target (single tier, **not** stacked):
-   - distance ≤ **4.5°** → **4** points  
-   - ≤ **13.5°** → **3** points  
-   - ≤ **22.5°** → **2** points  
-   - otherwise **0** points  
+  - distance ≤ **4.5°** → **4** points  
+  - ≤ **13.5°** → **3** points  
+  - ≤ **22.5°** → **2** points  
+  - otherwise **0** points  
    (“Distance” is `|averageGuess − target|`.)
 3. **Counter team** can earn **1** bonus point if their average is closer to the target than the guessing team’s average; otherwise **0**.
 4. If the guessing team has **no** final guesses, guessing points are **0**. If the counter team has **no** final guesses, their average is treated as **80.0** for the “who is closer” comparison only.
@@ -247,7 +261,7 @@ On `CREATE_NEW_GAME`, the server sets **team A to 0** and **team B to 1** before
 
 ## Win condition (> 10 points)
 
-The backend **does not** automatically stop the match when a score exceeds 10 or declare a winner. **`wins` on Player is not updated by this flow.** Clients should implement “game over” UX by comparing `gamePointsTeamA` / `gamePointsTeamB` to your house rules (for example first team **above** 10 points wins, tie-break by higher score).
+The backend **does not** automatically stop the match when a score exceeds 10 or declare a winner. `**wins` on Player is not updated by this flow.** Clients should implement “game over” UX by comparing `gamePointsTeamA` / `gamePointsTeamB` to your house rules (for example first team **above** 10 points wins, tie-break by higher score).
 
 ---
 
@@ -259,17 +273,19 @@ The room JSON **includes** `gameTargetDegree` for every subscriber. **Hiding the
 
 ## Summary table of HTTP routes
 
-| Method | Path                         | Purpose |
-|--------|------------------------------|---------|
-| POST   | `/player/create`             | Create player |
-| POST   | `/player/{uuid}/heartbeat` | Heartbeat |
-| POST   | `/room/create`               | Create room |
-| POST   | `/room/join`                 | Join room |
-| POST   | `/room/switch-team`        | Move player to team A or B |
-| GET    | `/room/{uuid}`               | Room snapshot |
-| POST   | `/room/{uuid}/refresh`       | Admin refresh / push update |
-| POST   | `/room/{uuid}/game-action`   | Game actions |
-| GET    | `/cards`                     | List all cards |
+
+| Method | Path                       | Purpose                     |
+| ------ | -------------------------- | --------------------------- |
+| POST   | `/player/create`           | Create player               |
+| POST   | `/player/{uuid}/heartbeat` | Heartbeat                   |
+| POST   | `/room/create`             | Create room                 |
+| POST   | `/room/join`               | Join room                   |
+| POST   | `/room/switch-team`        | Move player to team A or B  |
+| GET    | `/room/{uuid}`             | Room snapshot               |
+| POST   | `/room/{uuid}/refresh`     | Admin refresh / push update |
+| POST   | `/room/{uuid}/game-action` | Game actions                |
+| GET    | `/cards`                   | List all cards              |
+
 
 ---
 
@@ -279,3 +295,4 @@ The room JSON **includes** `gameTargetDegree` for every subscriber. **Hiding the
 - Send **heartbeat every ~15s** to `/player/{PLAYER_UUID}/heartbeat`.
 - Treat **room creator** as admin (local storage); wire **Refresh** → `POST /room/{uuid}/refresh` and **Create new game** → `CREATE_NEW_GAME` game-action.
 - After reveal, **Next round** → `NEXT_ROUND` (from `STATE_04_REVEAL`).
+
