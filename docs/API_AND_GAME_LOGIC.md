@@ -69,12 +69,20 @@ Creates a room. The **first player to create the room is treated as “admin” 
 **Body:**
 
 
-| Field      | Type   | Required |
-| ---------- | ------ | -------- |
-| `password` | string | no       |
+| Field        | Type   | Required |
+| ------------ | ------ | -------- |
+| `name`       | string | no       |
+| `uuidPlayer` | string | no       |
+| `password`   | string | no       |
 
 
-**Response:** JSON representation of the new `Room` entity (includes `uuid`, `password` is stored server-side but may not appear in all serializers—verify in your environment).
+**Behavior:**
+
+- If `name` is provided, it is used as-is.
+- If `name` is omitted and `uuidPlayer` is provided and resolves to an existing player, room name defaults to `"<PlayerName>'s room"`.
+- If `name` is omitted and no matching player can be found, room name remains `null`.
+
+**Response:** JSON representation of the new `Room` entity (includes `uuid` and `name`; `password` is stored server-side but may not appear in all serializers—verify in your environment).
 
 ---
 

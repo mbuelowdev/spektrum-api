@@ -55,10 +55,25 @@ final class RoomController extends AbstractController
     public function app_room_create(#[MapRequestPayload] CreateRoomDto $dto): JsonResponse {
 
         $uuid = Uuid::v4();
+        $roomName = $dto->name;
+
+        if ($roomName === null && $dto->uuidPlayer !== null) {
+            $player = $this->playerRepository->findOneBy(['uuid' => $dto->uuidPlayer]);
+            if ($player !== null) {
+                $roomName = sprintf("%s's room", $player->getName());
+            }
+        }
+
+        if ($roomName !== null && strlen($roomName) > 255) {
+            $roomName = function_exists('mb_strcut')
+                ? mb_strcut($roomName, 0, 255, 'UTF-8')
+                : substr($roomName, 0, 255);
+        }
 
         // Create new Room entity
         $room = new Room();
         $room->setUuid($uuid);
+        $room->setName($roomName);
         $room->setPassword($dto->password);
         $room->setCreatedAt(new \DateTimeImmutable());
 

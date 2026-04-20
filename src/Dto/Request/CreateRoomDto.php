@@ -8,6 +8,10 @@ final class CreateRoomDto
 {
     public function __construct(
         #[Groups(['default'])]
+        public ?string $name = null,
+        #[Groups(['default'])]
+        public ?string $uuidPlayer = null,
+        #[Groups(['default'])]
         public ?string $password = null,
     ) {}
 }
