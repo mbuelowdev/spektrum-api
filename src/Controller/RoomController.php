@@ -64,6 +64,12 @@ final class RoomController extends AbstractController
             }
         }
 
+        if ($roomName !== null && strlen($roomName) > 255) {
+            $roomName = function_exists('mb_strcut')
+                ? mb_strcut($roomName, 0, 255, 'UTF-8')
+                : substr($roomName, 0, 255);
+        }
+
         // Create new Room entity
         $room = new Room();
         $room->setUuid($uuid);
