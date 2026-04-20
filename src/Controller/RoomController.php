@@ -107,7 +107,7 @@ final class RoomController extends AbstractController
         if ($room->getPassword() !== null && $room->getPassword() !== $dto->password) {
             return $this->json([
                 'message' => 'Failed to join the room. Wrong password.',
-            ]);
+            ], 401);
         }
 
         // Add player to room, update activity state
