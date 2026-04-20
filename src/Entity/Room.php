@@ -22,6 +22,10 @@ class Room
     private ?string $uuid = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['default'])]
+    private ?string $name = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
     private ?string $password = null;
 
     #[ORM\Column]
@@ -110,6 +114,18 @@ class Room
     public function setUuid(string $uuid): static
     {
         $this->uuid = $uuid;
+
+        return $this;
+    }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    public function setName(?string $name): static
+    {
+        $this->name = $name;
 
         return $this;
     }

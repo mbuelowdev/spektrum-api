@@ -20,6 +20,7 @@ CREATE TABLE room (
     game_active_player_id INT DEFAULT NULL,
     game_active_card_id INT DEFAULT NULL,
     uuid UUID NOT NULL,
+    name VARCHAR(255) DEFAULT NULL,
     password VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
     game_state VARCHAR(255) DEFAULT NULL,
