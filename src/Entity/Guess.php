@@ -25,6 +25,10 @@ class Guess
 
     #[ORM\Column]
     #[Groups(['default'])]
+    private ?float $distance = null;
+
+    #[ORM\Column]
+    #[Groups(['default'])]
     private ?bool $isPreview = null;
 
     #[ORM\ManyToOne(inversedBy: 'gameGuesses')]
@@ -56,6 +60,18 @@ class Guess
     public function setDegree(float $degree): static
     {
         $this->degree = $degree;
+
+        return $this;
+    }
+
+    public function getDistance(): float
+    {
+        return $this->distance ?? 1.0;
+    }
+
+    public function setDistance(float $distance): static
+    {
+        $this->distance = $distance;
 
         return $this;
     }

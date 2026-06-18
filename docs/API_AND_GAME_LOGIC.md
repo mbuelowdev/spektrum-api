@@ -191,14 +191,40 @@ Defined in `App\Dto\GameActions`:
 | `NEW_OR_OLD_CARDS`      | Draw a new card, allowing already-played cards         |
 | `START_SPINNING`        | Pick random target degree and advance state            |
 | `SUBMIT_CLUEGIVER_CLUE` | Cluegiver submits sentence/clue (`value`)              |
-| `SUBMIT_PREVIEW_GUESS`  | Place or update a **preview** guess (`value` = degree) |
+| `SUBMIT_PREVIEW_GUESS`  | Place or update a **preview** guess (`value`; see below) |
 | `REMOVE_PREVIEW_GUESS`  | Remove preview guesses for `uuidPlayer`                |
-| `SUBMIT_GUESS`          | Lock in a non-preview guess (`value` = degree)         |
+| `SUBMIT_GUESS`          | Lock in a non-preview guess (`value`; see below)       |
 | `REVEAL`                | Force reveal from counter-guess state                  |
 | `NEXT_ROUND`            | Advance to next round after reveal                     |
 
 
 (`JOIN_ROOM` / `LEAVE_ROOM` exist in the DTO class but are **not** handled by `executeGameAction`; joining/leaving use the dedicated room endpoints.)
+
+### Guess `value` format (`SUBMIT_PREVIEW_GUESS` / `SUBMIT_GUESS`)
+
+The `value` field must be a comma-separated angle and distance:
+
+| Example | Meaning |
+| ------- | ------- |
+| `"72.5,0.65"` | Angle **0–160** (game degrees) and normalized distance **0–1** (0 = semicircle center, 1 = arc edge) |
+
+Invalid or malformed values are rejected with **400** (missing angle or distance, angle out of range, distance out of range, or malformed strings such as `"72.5"`, `"80,"`, or `"80,0.5,0.3"`).
+
+Stored guesses expose `degree` and `distance` on each item in `gameGuesses` (room JSON and Mercure payloads). Older stored guesses without a distance column are treated as distance **1** when read.
+
+**Example request:**
+
+```json
+{ "action": "SUBMIT_GUESS", "uuidPlayer": "...", "value": "80,0.42" }
+```
+
+**Example stored guess (in `gameGuesses`):**
+
+```json
+{ "degree": 80, "distance": 0.42, "isPreview": false, "player": { ... } }
+```
+
+Scoring still uses **angle only** (team average degree vs `gameTargetDegree`); distance is stored and returned for client rendering.
 
 ---
 

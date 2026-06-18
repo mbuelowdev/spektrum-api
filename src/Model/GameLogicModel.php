@@ -3,6 +3,7 @@
 namespace App\Model;
 
 use App\Dto\GameActions;
+use App\Model\GuessValueParser;
 use App\Dto\GameStates;
 use App\Dto\Request\GameActionDto;
 use App\Dto\RoomEvents;
@@ -250,10 +251,13 @@ class GameLogicModel
             }
         }
 
+        $parsedGuess = GuessValueParser::parse($dto->value);
+
         $guess = new Guess();
         $guess->setRoom($room);
         $guess->setPlayer($player);
-        $guess->setDegree(floatval($dto->value));
+        $guess->setDegree($parsedGuess->degree);
+        $guess->setDistance($parsedGuess->distance);
         $guess->setIsPreview($isPreview);
 
         $room->addGameGuess($guess);
