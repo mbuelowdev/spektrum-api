@@ -19,7 +19,7 @@
         "name": "postgres",
         "tag": "17.6",
         "argPorts": "-p 172.17.0.1:16010:5432",
-        "argVolumes": "-v /deployments/mbuelow_dev_spektrum_api/init.sql:/docker-entrypoint-initdb.d/init.sql -v spektrum_api_postgres_data:/var/lib/postgresql",
+        "argVolumes": "-v /deployments/mbuelow_dev_spektrum_api/init.sql:/docker-entrypoint-initdb.d/init.sql -v spektrum_api_postgres_data1:/var/lib/postgresql",
         "argExtra": "-e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=spektrum"
     },
     {
