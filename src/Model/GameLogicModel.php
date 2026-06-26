@@ -283,11 +283,8 @@ class GameLogicModel
         // One less player needed because in a guess round one player is the cluegiver instead of a player
         $quantityOfPlayingPlayers = $isGuessRound ? (count($arrPlayingPlayers) - 1) : count($arrPlayingPlayers);
         $isRoundOver = count($arrFinalGuessesPlayingTeam) === $quantityOfPlayingPlayers;
-        if ($isRoundOver && ($room->getGameState() === GameStates::$STATE_02_GUESS_ROUND || $room->getGameState() === GameStates::$STATE_03_COUNTER_GUESS_ROUND)) {
+        if ($isRoundOver && $room->getGameState() === GameStates::$STATE_02_GUESS_ROUND) {
             $room->setGameState(GameStates::getNextState($room->getGameState()));
-            if ($room->getGameState() === GameStates::$STATE_04_REVEAL) {
-                $this->applyRevealScoring($room);
-            }
         }
 
         $this->entityManager->persist($guess);

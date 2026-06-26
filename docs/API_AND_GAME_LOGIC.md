@@ -256,7 +256,7 @@ Transitions are enforced in `GameLogicModel`; invalid actions no-op (no error bo
 8. **Clue** → `SUBMIT_CLUEGIVER_CLUE` with the clue in `value`. State becomes `STATE_02_GUESS_ROUND`.
 9. **Guessing team:** Players use `SUBMIT_PREVIEW_GUESS` / `REMOVE_PREVIEW_GUESS` / `SUBMIT_GUESS`. The **cluegiver** (`gameActivePlayer`) cannot submit guesses. Spectators (not on A or B) may only use **preview** guesses, not final ones.
 10. When every **non–active-player** member of the guessing team has a **final** guess, state advances to `STATE_03_COUNTER_GUESS_ROUND`.
-11. **Counter team** repeats preview/final guesses. When all required final guesses are in—or an authorized client sends `**REVEAL`**—the round resolves (see below).
+11. **Counter team** repeats preview/final guesses. An authorized client must send `**REVEAL`** to resolve the round (see below); completing all counter guesses does not advance state automatically.
 12. `**STATE_04_REVEAL`:** Points have been applied. `**NEXT_ROUND`** picks the next active player and card and returns to `STATE_00_START`.
 
 ### Which team guesses when
